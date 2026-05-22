@@ -283,6 +283,11 @@ header h1 span{color:#52b788;}
   .ib-metrics{grid-template-columns:1fr 1fr;}
   .macro-cmp{grid-template-columns:1fr 1fr;}
 }
+.ai-bar{background:#0d1117;border-bottom:1px solid #1e293b;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.ai-gen-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-family:inherit;cursor:pointer;font-weight:600;transition:all .2s;white-space:nowrap;}
+.ai-gen-btn:hover{background:linear-gradient(135deg,#4338ca,#6d28d9);}
+.ai-gen-btn:disabled{opacity:.6;cursor:not-allowed;}
+.ai-plan-badge{font-size:0.73rem;color:#a78bfa;font-weight:600;background:#1e1b4b;border:1px solid #3730a3;border-radius:20px;padding:3px 10px;}
 </style>
 </head>
 <body>
@@ -376,6 +381,10 @@ header h1 span{color:#52b788;}
 
 <div id="section-plan">
   <div class="week-nav" id="week-nav"></div>
+  <div class="ai-bar">
+    <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIPlan()">✨ Generar plan con IA</button>
+    <span class="ai-plan-badge" id="ai-plan-badge" style="display:none">🤖 Plan generado con IA</span>
+  </div>
   <div class="tabs" id="tabs"></div>
   <div id="content"></div>
 </div>
@@ -400,6 +409,7 @@ let PROFILE={};
 let USER_MACROS={kcal:1900,prot:150,fat:55,carb:180};
 let CW=1;
 let START=new Date();
+const GEMINI_KEY='AIzaSyBAI8d0Onz0mV88tUALwMT7FdckUpalYW8';
 
 function uRef(path){ return DB.ref(`users/${UID}/${path}`); }
 function _wk(){ if(!STORE.weeks[`w${CW}`]) STORE.weeks[`w${CW}`]={}; return STORE.weeks[`w${CW}`]; }
@@ -433,71 +443,71 @@ function calcMacros(p){
 }
 
 // ── PLAN DATA ─────────────────────────────────────────────────────────────
-const PLAN=[
+let PLAN=[
   { day:"Lunes", meals:[
     {name:"Desayuno",time:"07:00–08:00",emoji:"🍳",ca:"#b45309",cb:"#78350f",method:"Plancha · Hervido",
-     tip:"Bate 3 huevos con sal y cocínalos revolviendo en sartén antiadherente con spray vegetal a fuego bajo-medio. Aparte, calienta la leche Colun, agrega la avena Quaker y revuelve 5 min hasta que esté cremosa.",
-     items:[{f:"Huevos Agrosuper",q:"3 unidades",k:215},{f:"Avena Quaker",q:"80g en seco",k:305},{f:"Leche Colun descremada",q:"200ml",k:68}]},
+     tip:"Bate 3 huevos con sal y cocínalos revolviendo en sartén antiadherente con spray vegetal a fuego bajo-medio. Aparte, calienta la leche descremada, agrega la avena integral y revuelve 5 min hasta que esté cremosa.",
+     items:[{f:"Huevos de campo",q:"3 unidades",k:215},{f:"Avena integral",q:"80g en seco",k:305},{f:"Leche descremada",q:"200ml",k:68}]},
     {name:"Colación AM",time:"10:00–10:30",emoji:"🥛",ca:"#1d4ed8",cb:"#1e3a8a",method:"Sin cocción",
-     tip:"Sirve el yogur griego Colun en un bowl y agrega las nueces partidas encima.",
-     items:[{f:"Yogur Griego Colun natural",q:"200g",k:112},{f:"Nueces Watts",q:"20g",k:148}]},
+     tip:"Sirve el yogur griego en un bowl y agrega las nueces partidas encima.",
+     items:[{f:"Yogur griego natural",q:"200g",k:112},{f:"Nueces",q:"20g",k:148}]},
     {name:"Almuerzo",time:"13:00–14:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha",tip:"Sazona el salmón con limón, sal de mar y eneldo. Sartén caliente 4-5 min por lado.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo en polvo, orégano, paprika y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
-     sides:[{f:"Arroz integral Tucapel",q:"150g cocido",k:165},{f:"Ensalada lechuga, tomate, pepino",q:"libre",k:20},{f:"Aceite de oliva extra virgen",q:"1 cucharadita",k:45}]},
+     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha",tip:"Sazona el salmón con limón, sal de mar y eneldo. Sartén caliente 4-5 min por lado.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo en polvo, orégano, paprika y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
+     sides:[{f:"Arroz integral",q:"150g cocido",k:165},{f:"Ensalada lechuga, tomate, pepino",q:"libre",k:20},{f:"Aceite de oliva extra virgen",q:"1 cucharadita",k:45}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🐟",ca:"#0369a1",cb:"#0c4a6e",method:"Sin cocción",
      tip:"Escurre el atún y mézclalo con limón y cebollín picado. Sirve sobre galletas de arroz.",
-     items:[{f:"Atún Aldaya al agua (lata)",q:"1 lata 160g",k:130},{f:"Galletas de arroz integrales",q:"3 unidades",k:120}]},
+     items:[{f:"Atún al agua (lata)",q:"1 lata 160g",k:130},{f:"Galletas de arroz integrales",q:"3 unidades",k:120}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐟",ca:"#0f766e",cb:"#134e4a",method:"Horno",tip:"Envuelve la reineta en papel aluminio con limón, ajo y sal. Hornea a 190°C por 20-22 min.",pf:"Reineta al horno",pq:"200g",pk:204},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, orégano y paprika. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
+     variants:[{tag:"Especial",emoji:"🐟",ca:"#0f766e",cb:"#134e4a",method:"Horno",tip:"Envuelve la reineta en papel aluminio con limón, ajo y sal. Hornea a 190°C por 20-22 min.",pf:"Reineta al horno",pq:"200g",pk:204},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, orégano y paprika. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
      sides:[{f:"Camote / batata cocido",q:"150g",k:148},{f:"Brócoli al vapor",q:"150g",k:51}]}
   ]},
   { day:"Martes", meals:[
     {name:"Desayuno",time:"07:00–08:00",emoji:"🥚",ca:"#7c3aed",cb:"#4c1d95",method:"Plancha",
      tip:"Separa 4 claras + 1 huevo, bate con sal. Omelette en sartén antiadherente. Sirve sobre pan integral tostado con palta aplastada.",
-     items:[{f:"Pan de molde integral Bimbo",q:"2 rebanadas",k:154},{f:"Huevos Agrosuper (4 claras+1 entero)",q:"5 und",k:142},{f:"Palta Hass",q:"½ unidad",k:112}]},
+     items:[{f:"Pan de molde integral",q:"2 rebanadas",k:154},{f:"Huevos de campo (4 claras+1 entero)",q:"5 und",k:142},{f:"Palta Hass",q:"½ unidad",k:112}]},
     {name:"Colación AM",time:"10:00–10:30",emoji:"🧀",ca:"#d97706",cb:"#92400e",method:"Sin cocción",
      tip:"El quesillo fresco lo encuentras laminado en la sección de lácteos. Sírvelo con la manzana en gajos.",
      items:[{f:"Quesillo fresco",q:"200g",k:164},{f:"Manzana",q:"1 unidad mediana",k:95}]},
     {name:"Almuerzo",time:"13:00–14:00",type:"variant",
      variants:[{tag:"Especial",emoji:"🐟",ca:"#0369a1",cb:"#0c4a6e",method:"Horno",tip:"Merluza en papel aluminio con limón, sal y perejil. Hornea a 190°C por 18-20 min.",pf:"Merluza austral al horno",pq:"200g",pk:200},{tag:"Común",emoji:"🥩",ca:"#dc2626",cb:"#7f1d1d",method:"Sartén",tip:"Saltea la carne molida con ajo y cebolla hasta dorar. Sazona con comino y orégano.",pf:"Carne molida especial 90% magra",pq:"200g",pk:350}],
-     sides:[{f:"Lentejas Carozzi cocidas",q:"150g",k:175},{f:"Ensalada mixta con limón",q:"libre",k:24}]},
+     sides:[{f:"Lentejas cocidas",q:"150g",k:175},{f:"Ensalada mixta con limón",q:"libre",k:24}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🍌",ca:"#ca8a04",cb:"#713f12",method:"Sin cocción",
      tip:"El requesón es alto en caseína, ideal para la tarde. Mézclalo con el plátano en rodajas.",
      items:[{f:"Requesón",q:"150g",k:107},{f:"Plátano / banana",q:"1 unidad pequeña",k:89}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🦃",ca:"#064e3b",cb:"#022c22",method:"Plancha",tip:"Sazona el filete de pavo con ajo, orégano y limón. Plancha a fuego medio 5-6 min por lado.",pf:"Filete de pavo San Jorge",pq:"200g",pk:278},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo en polvo, comino y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
+     variants:[{tag:"Especial",emoji:"🦃",ca:"#064e3b",cb:"#022c22",method:"Plancha",tip:"Sazona el filete de pavo con ajo, orégano y limón. Plancha a fuego medio 5-6 min por lado.",pf:"Filete de pavo",pq:"200g",pk:278},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo en polvo, comino y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
      sides:[{f:"Quinoa orgánica",q:"120g cocida",k:146},{f:"Espinaca salteada con ajo",q:"100g",k:50}]}
   ]},
   { day:"Miércoles", meals:[
     {name:"Desayuno",time:"07:00–08:00",emoji:"💪",ca:"#b45309",cb:"#451a03",method:"Hervido",
-     tip:"Calienta 200ml de leche Colun. Agrega avena y cocina 5 min revolviendo. Fuera del fuego, mezcla el scoop de proteína whey.",
-     items:[{f:"Avena Quaker",q:"80g en seco",k:298},{f:"Proteína Whey (vainilla o chocolate)",q:"1 scoop 30g",k:132},{f:"Leche Colun descremada",q:"200ml",k:68}]},
+     tip:"Calienta 200ml de leche descremada. Agrega avena y cocina 5 min revolviendo. Fuera del fuego, mezcla el scoop de proteína whey.",
+     items:[{f:"Avena integral",q:"80g en seco",k:298},{f:"Proteína Whey",q:"1 scoop 30g",k:132},{f:"Leche descremada",q:"200ml",k:68}]},
     {name:"Colación AM",time:"10:00–10:30",emoji:"🥛",ca:"#1d4ed8",cb:"#1e3a8a",method:"Sin cocción",
      tip:"Sirve el yogur griego con las almendras naturales encima.",
-     items:[{f:"Yogur Griego Colun natural",q:"200g",k:112},{f:"Almendras naturales Watts",q:"20g",k:140}]},
+     items:[{f:"Yogur griego natural",q:"200g",k:112},{f:"Almendras naturales",q:"20g",k:140}]},
     {name:"Almuerzo",time:"13:00–14:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐟",ca:"#0369a1",cb:"#0c4a6e",method:"Horno",tip:"Merluza en papel aluminio con limón, sal y perejil. Hornea 190°C por 20 min.",pf:"Merluza austral",pq:"250g",pk:255},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, paprika y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
+     variants:[{tag:"Especial",emoji:"🐟",ca:"#0369a1",cb:"#0c4a6e",method:"Horno",tip:"Merluza en papel aluminio con limón, sal y perejil. Hornea 190°C por 20 min.",pf:"Merluza austral",pq:"250g",pk:255},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, paprika y limón. Plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
      sides:[{f:"Papa entera con cáscara cocida",q:"200g",k:160},{f:"Ensalada repollo y zanahoria rallada",q:"libre",k:40},{f:"Aceite de oliva",q:"1 cucharadita",k:45}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🥚",ca:"#374151",cb:"#111827",method:"Hervido",
      tip:"Hierve los huevos exactamente 10 min. Enfría con agua fría de inmediato para pelarlos fácil.",
-     items:[{f:"Huevos duros Agrosuper",q:"2 unidades",k:143},{f:"Galletas de arroz integrales",q:"3 unidades",k:100}]},
+     items:[{f:"Huevos duros",q:"2 unidades",k:143},{f:"Galletas de arroz integrales",q:"3 unidades",k:100}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha · Horno",tip:"Sella el salmón 3 min por lado. Pasa al horno 180°C por 8 min. Aliña con limón y eneldo.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Horno",tip:"Sazona el muslo sin piel con ajo, paprika y orégano. Hornea 200°C por 30-35 min.",pf:"Muslo de pollo Agrosuper sin piel",pq:"200g",pk:274}],
-     sides:[{f:"Arroz integral Tucapel",q:"120g cocido",k:121},{f:"Zapallo italiano grillado",q:"150g",k:37}]}
+     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha · Horno",tip:"Sella el salmón 3 min por lado. Pasa al horno 180°C por 8 min. Aliña con limón y eneldo.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Horno",tip:"Sazona el muslo sin piel con ajo, paprika y orégano. Hornea 200°C por 30-35 min.",pf:"Muslo de pollo sin piel",pq:"200g",pk:274}],
+     sides:[{f:"Arroz integral",q:"120g cocido",k:121},{f:"Zapallo italiano grillado",q:"150g",k:37}]}
   ]},
   { day:"Jueves", meals:[
     {name:"Desayuno",time:"07:00–08:00",emoji:"🍳",ca:"#b45309",cb:"#78350f",method:"Plancha",
      tip:"Revuelve 3 huevos a fuego bajo. Tuesta el pan integral. Aplasta ¼ palta sobre el pan con limón y sal.",
-     items:[{f:"Huevos Agrosuper revueltos",q:"3 unidades",k:215},{f:"Pan de molde integral Bimbo",q:"2 rebanadas",k:154},{f:"Tomate + Palta Hass",q:"½ tomate + ¼ palta",k:72}]},
+     items:[{f:"Huevos revueltos",q:"3 unidades",k:215},{f:"Pan de molde integral",q:"2 rebanadas",k:154},{f:"Tomate + Palta Hass",q:"½ tomate + ¼ palta",k:72}]},
     {name:"Colación AM",time:"10:00–10:30",emoji:"🐟",ca:"#0369a1",cb:"#0c4a6e",method:"Sin cocción",
      tip:"Escurre el atún y mézclalo con limón y perejil. Sirve sobre galletas de arroz.",
-     items:[{f:"Atún Aldaya al agua (lata)",q:"1 lata 160g",k:130},{f:"Galletas de arroz integrales",q:"3 unidades",k:100}]},
+     items:[{f:"Atún al agua (lata)",q:"1 lata 160g",k:130},{f:"Galletas de arroz integrales",q:"3 unidades",k:100}]},
     {name:"Almuerzo",time:"13:00–14:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha sellado",tip:"Sella los lomos de atún en plancha MUY caliente, 2-3 min por lado. Debe quedar rosado por dentro.",pf:"Atún en lomos frescos",pq:"200g",pk:280},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo y paprika. Cocina en plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
-     sides:[{f:"Fideos integrales Carozzi",q:"150g cocidos",k:179},{f:"Salsa de tomate natural sin azúcar",q:"100g",k:36},{f:"Ensalada verde",q:"libre",k:20}]},
+     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha sellado",tip:"Sella los lomos de atún en plancha MUY caliente, 2-3 min por lado. Debe quedar rosado por dentro.",pf:"Atún en lomos frescos",pq:"200g",pk:280},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo y paprika. Cocina en plancha caliente 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
+     sides:[{f:"Fideos integrales",q:"150g cocidos",k:179},{f:"Salsa de tomate natural sin azúcar",q:"100g",k:36},{f:"Ensalada verde",q:"libre",k:20}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🥛",ca:"#1d4ed8",cb:"#1e3a8a",method:"Sin cocción",
      tip:"Sirve el yogur griego con las nueces partidas encima.",
-     items:[{f:"Yogur Griego Colun natural",q:"200g",k:112},{f:"Nueces Watts",q:"15g",k:111}]},
+     items:[{f:"Yogur griego natural",q:"200g",k:112},{f:"Nueces",q:"15g",k:111}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
      variants:[{tag:"Especial",emoji:"🥩",ca:"#991b1b",cb:"#450a0a",method:"Plancha",tip:"Aplana el filete de cerdo. Sazona con ajo, tomillo y sal. Plancha 4-5 min por lado.",pf:"Filete lomo de cerdo sin grasa",pq:"180g",pk:270},{tag:"Común",emoji:"🥩",ca:"#dc2626",cb:"#7f1d1d",method:"Plancha",tip:"Sal gruesa y pimienta al lomo liso. Plancha muy caliente, 3-4 min por lado. Reposa 5 min.",pf:"Lomo liso vacuno a la plancha",pq:"180g",pk:294}],
      sides:[{f:"Camote / batata cocido",q:"150g",k:148},{f:"Ensalada pepino y apio con limón",q:"libre",k:20}]}
@@ -505,33 +515,33 @@ const PLAN=[
   { day:"Viernes", meals:[
     {name:"Desayuno",time:"07:00–08:00",emoji:"🥣",ca:"#b45309",cb:"#451a03",method:"Hervido · Plancha",
      tip:"Cuece la avena con leche caliente, 5 min. Aparte, cuece 4 claras revueltas en sartén con spray vegetal.",
-     items:[{f:"Avena Quaker",q:"80g en seco",k:305},{f:"Claras de huevo Agrosuper",q:"4 claras",k:57},{f:"Leche Colun descremada",q:"150ml",k:48}]},
+     items:[{f:"Avena integral",q:"80g en seco",k:305},{f:"Claras de huevo",q:"4 claras",k:57},{f:"Leche descremada",q:"150ml",k:48}]},
     {name:"Colación AM",time:"10:00–10:30",emoji:"🧀",ca:"#d97706",cb:"#92400e",method:"Sin cocción",
      tip:"El requesón es alto en caseína. Combínalo con el plátano en rodajas.",
      items:[{f:"Requesón",q:"200g",k:140},{f:"Plátano / banana",q:"1 unidad pequeña",k:89}]},
     {name:"Almuerzo",time:"13:00–14:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha",tip:"Sazona el salmón con limón y eneldo. Sartén caliente 4-5 min por lado.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, paprika y limón. Plancha 6-7 min por lado.",pf:"Pechuga de pollo Agrosuper",pq:"200g",pk:295}],
-     sides:[{f:"Arroz integral Tucapel",q:"120g cocido",k:121},{f:"Ensalada mixta con limón",q:"libre",k:28}]},
+     variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha",tip:"Sazona el salmón con limón y eneldo. Sartén caliente 4-5 min por lado.",pf:"Salmón del Pacífico fresco",pq:"180g",pk:306},{tag:"Común",emoji:"🍗",ca:"#15803d",cb:"#14532d",method:"Plancha",tip:"Sazona la pechuga con ajo, paprika y limón. Plancha 6-7 min por lado.",pf:"Pechuga de pollo",pq:"200g",pk:295}],
+     sides:[{f:"Arroz integral",q:"120g cocido",k:121},{f:"Ensalada mixta con limón",q:"libre",k:28}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🥜",ca:"#92400e",cb:"#451a03",method:"Sin cocción",
      tip:"Mezcla el yogur con las almendras. Alto en proteína para la tarde.",
-     items:[{f:"Yogur Griego Colun natural",q:"150g",k:84},{f:"Almendras naturales Watts",q:"15g",k:105}]},
+     items:[{f:"Yogur griego natural",q:"150g",k:84},{f:"Almendras naturales",q:"15g",k:105}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
-     variants:[{tag:"Especial",emoji:"🍳",ca:"#b45309",cb:"#78350f",method:"Plancha",tip:"Bate 3 huevos con el atún escurrido, sal y orégano. Cocina como omelette en sartén.",pf:"Omelette con atún Aldaya",pq:"3 huevos + 1 lata",pk:345},{tag:"Común",emoji:"🍳",ca:"#374151",cb:"#1f2937",method:"Plancha",tip:"Bate 3 huevos con el jamón en trozos, sal y orégano. Cocina como omelette.",pf:"Omelette con jamón pavo San Jorge",pq:"3 huevos + 80g jamón",pk:310}],
+     variants:[{tag:"Especial",emoji:"🍳",ca:"#b45309",cb:"#78350f",method:"Plancha",tip:"Bate 3 huevos con el atún escurrido, sal y orégano. Cocina como omelette en sartén.",pf:"Omelette con atún al agua",pq:"3 huevos + 1 lata",pk:345},{tag:"Común",emoji:"🍳",ca:"#374151",cb:"#1f2937",method:"Plancha",tip:"Bate 3 huevos con el jamón en trozos, sal y orégano. Cocina como omelette.",pf:"Omelette con jamón de pavo",pq:"3 huevos + 80g jamón",pk:310}],
      sides:[{f:"Camote cocido",q:"120g",k:118},{f:"Ensalada verde libre",q:"libre",k:15}]}
   ]},
   { day:"Sábado", meals:[
     {name:"Desayuno",time:"08:00–09:00",emoji:"🥞",ca:"#7c3aed",cb:"#4c1d95",method:"Plancha",
      tip:"Mezcla la harina de avena con el huevo, leche y sal hasta obtener una mezcla homogénea. Cocina en sartén antiadherente como tortillas pequeñas.",
-     items:[{f:"Avena Quaker molida (harina)",q:"60g",k:228},{f:"Huevo Agrosuper",q:"2 unidades",k:143},{f:"Leche Colun descremada",q:"100ml",k:34},{f:"Yogur Griego Colun",q:"100g",k:56}]},
+     items:[{f:"Avena integral molida (harina)",q:"60g",k:228},{f:"Huevo de campo",q:"2 unidades",k:143},{f:"Leche descremada",q:"100ml",k:34},{f:"Yogur griego",q:"100g",k:56}]},
     {name:"Colación AM",time:"10:30–11:00",emoji:"🍎",ca:"#dc2626",cb:"#7f1d1d",method:"Sin cocción",
      tip:"Merienda simple y nutritiva para antes del almuerzo del fin de semana.",
-     items:[{f:"Manzana o pera",q:"1 unidad",k:95},{f:"Nueces Watts",q:"20g",k:148}]},
+     items:[{f:"Manzana o pera",q:"1 unidad",k:95},{f:"Nueces",q:"20g",k:148}]},
     {name:"Almuerzo",time:"13:30–14:30",type:"variant",
-     variants:[{tag:"Especial",emoji:"🍖",ca:"#7c3aed",cb:"#4c1d95",method:"Horno",tip:"Adoba el costillar con ajo, orégano, paprika y limón. Hornea cubierto con aluminio a 170°C por 1.5 hrs. Destapa los últimos 15 min.",pf:"Costillar cerdo magro",pq:"250g",pk:380},{tag:"Común",emoji:"🍗",ca:"#ca8a04",cb:"#78350f",method:"Horno",tip:"Adoba el pollo con ajo, orégano y limón. Hornea a 200°C por 45-50 min dando vuelta a la mitad.",pf:"Pollo entero Agrosuper (pechuga y muslo sin piel)",pq:"300g",pk:450}],
+     variants:[{tag:"Especial",emoji:"🍖",ca:"#7c3aed",cb:"#4c1d95",method:"Horno",tip:"Adoba el costillar con ajo, orégano, paprika y limón. Hornea cubierto con aluminio a 170°C por 1.5 hrs. Destapa los últimos 15 min.",pf:"Costillar cerdo magro",pq:"250g",pk:380},{tag:"Común",emoji:"🍗",ca:"#ca8a04",cb:"#78350f",method:"Horno",tip:"Adoba el pollo con ajo, orégano y limón. Hornea a 200°C por 45-50 min dando vuelta a la mitad.",pf:"Pollo entero (pechuga y muslo sin piel)",pq:"300g",pk:450}],
      sides:[{f:"Papas cocidas con cáscara",q:"200g",k:160},{f:"Ensalada mixta completa",q:"libre",k:35}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🥛",ca:"#1d4ed8",cb:"#1e3a8a",method:"Sin cocción",
      tip:"Batido rápido post actividad. Mezcla todo en licuadora o agita bien.",
-     items:[{f:"Leche Colun descremada",q:"300ml",k:102},{f:"Proteína Whey",q:"1 scoop 30g",k:120},{f:"Plátano",q:"½ unidad",k:44}]},
+     items:[{f:"Leche descremada",q:"300ml",k:102},{f:"Proteína Whey",q:"1 scoop 30g",k:120},{f:"Plátano",q:"½ unidad",k:44}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
      variants:[{tag:"Especial",emoji:"🐡",ca:"#0369a1",cb:"#0c4a6e",method:"Horno",tip:"Congrio en papel aluminio con limón, ajo en láminas y sal de mar. Hornea a 190°C por 22-25 min.",pf:"Congrio colorado",pq:"200g",pk:200},{tag:"Común",emoji:"🐟",ca:"#0f766e",cb:"#134e4a",method:"Horno",tip:"Reineta en papel aluminio con limón, ajo y sal. Hornea 190°C por 20-22 min.",pf:"Reineta al horno",pq:"200g",pk:204}],
      sides:[{f:"Quinoa",q:"100g cocida",k:120},{f:"Espinaca salteada con ajo",q:"100g",k:50}]}
@@ -539,21 +549,91 @@ const PLAN=[
   { day:"Domingo", meals:[
     {name:"Desayuno",time:"08:30–09:30",emoji:"🍳",ca:"#b45309",cb:"#78350f",method:"Plancha · Tostado",
      tip:"Mezcla las claras con la harina de avena, bicarbonato y sal. Cocina como pancakes en sartén antiadherente. Sirve con yogur.",
-     items:[{f:"Claras de huevo Agrosuper",q:"6 claras",k:84},{f:"Avena Quaker molida",q:"50g",k:189},{f:"Yogur Griego Colun natural",q:"100g",k:56},{f:"Berries / frutillas frescas",q:"100g",k:45}]},
+     items:[{f:"Claras de huevo",q:"6 claras",k:84},{f:"Avena integral molida",q:"50g",k:189},{f:"Yogur griego natural",q:"100g",k:56},{f:"Berries / frutillas frescas",q:"100g",k:45}]},
     {name:"Colación AM",time:"11:00–11:30",emoji:"🧀",ca:"#d97706",cb:"#92400e",method:"Sin cocción",
      tip:"Snack proteico simple. El quesillo fresco es bajo en grasa y alto en proteína.",
      items:[{f:"Quesillo fresco",q:"150g",k:123},{f:"Galletas de arroz integrales",q:"3 unidades",k:100}]},
     {name:"Almuerzo",time:"13:30–14:30",type:"variant",
      variants:[{tag:"Especial",emoji:"🐠",ca:"#0f766e",cb:"#134e4a",method:"Plancha",tip:"Salmón con sal de mar, limón y eneldo. Plancha caliente 4-5 min por lado. Jugoso adentro.",pf:"Salmón del Pacífico fresco",pq:"200g",pk:340},{tag:"Común",emoji:"🥩",ca:"#dc2626",cb:"#7f1d1d",method:"Plancha",tip:"Atempera la posta 20 min. Sal gruesa y pimienta. Plancha muy caliente 3-4 min por lado. Reposa 5 min.",pf:"Posta vacuna magra",pq:"200g",pk:280}],
-     sides:[{f:"Arroz integral Tucapel",q:"150g cocido",k:165},{f:"Ensalada completa con palta",q:"libre + ½ palta",k:80}]},
+     sides:[{f:"Arroz integral",q:"150g cocido",k:165},{f:"Ensalada completa con palta",q:"libre + ½ palta",k:80}]},
     {name:"Colación PM",time:"17:00–17:30",emoji:"🍌",ca:"#ca8a04",cb:"#713f12",method:"Sin cocción",
      tip:"Merienda simple antes de la cena.",
-     items:[{f:"Plátano",q:"1 unidad mediana",k:105},{f:"Almendras Watts",q:"15g",k:105}]},
+     items:[{f:"Plátano",q:"1 unidad mediana",k:105},{f:"Almendras",q:"15g",k:105}]},
     {name:"Cena",time:"20:00–21:00",type:"variant",
      variants:[{tag:"Especial",emoji:"🍲",ca:"#7c3aed",cb:"#4c1d95",method:"Olla",tip:"Sofríe cebolla y ajo, agrega carne en trozos y sella. Agrega papa, zanahoria, choclo, zapallo, agua y sal. Cocina a fuego lento 45 min.",pf:"Cazuela vacuno magra",pq:"1 presa 200g + verduras",pk:380},{tag:"Común",emoji:"🍲",ca:"#15803d",cb:"#14532d",method:"Olla",tip:"Igual que la cazuela de vacuno pero con pollo. Sofríe cebolla y ajo, agrega presas de pollo sin piel, verduras y agua. Cocina 35-40 min.",pf:"Cazuela de pollo sin piel",pq:"1 presa 200g + verduras",pk:320}],
-     sides:[{f:"Arroz blanco Tucapel",q:"100g cocido",k:130}]}
+     sides:[{f:"Arroz blanco",q:"100g cocido",k:130}]}
   ]}
 ];
+
+// ── GEMINI AI PLAN ────────────────────────────────────────────────────────────
+function pickColor(text,isEspecial){
+  const t=(text||'').toLowerCase();
+  if(/salmón|merluza|reineta|congrio|atún|pescado|mariscos/.test(t)) return {ca:'#0f766e',cb:'#134e4a'};
+  if(/vacuno|posta|lomo\s|carne\s|res\b|cazuela v/.test(t)) return {ca:'#dc2626',cb:'#7f1d1d'};
+  if(/cerdo|chancho|costillar/.test(t)) return {ca:'#7c3aed',cb:'#4c1d95'};
+  if(/pollo|pavo/.test(t)) return {ca:'#15803d',cb:'#14532d'};
+  if(/huevo|omelette|clara/.test(t)) return {ca:'#b45309',cb:'#78350f'};
+  if(/avena|cereal|granola|pancake/.test(t)) return {ca:'#b45309',cb:'#451a03'};
+  if(/yogur|lácteo|queso|requesón|leche|quesillo/.test(t)) return {ca:'#1d4ed8',cb:'#1e3a8a'};
+  if(/nuez|almendra|maní|frutos\s+secos/.test(t)) return {ca:'#92400e',cb:'#451a03'};
+  if(/fruta|manzana|plátano|banana|naranja|berry|frutilla|pera/.test(t)) return {ca:'#dc2626',cb:'#7f1d1d'};
+  return isEspecial?{ca:'#0f766e',cb:'#134e4a'}:{ca:'#374151',cb:'#1f2937'};
+}
+
+async function generateAIPlan(){
+  const btn=document.getElementById('ai-gen-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Generando...';}
+  const m=USER_MACROS;
+  const objMap={bajar:'bajar grasa corporal',mantener:'mantener peso',ganar:'ganar masa muscular'};
+  const prompt=`Eres un nutricionista chileno. Crea un plan alimenticio de 7 días personalizado.
+Datos: Calorías ${m.kcal} kcal/día, Proteína ${m.prot}g, Grasas ${m.fat}g, Carbohidratos ${m.carb}g.
+Objetivo: ${objMap[PROFILE.objetivo]||'bajar grasa corporal'}. Sexo: ${PROFILE.sexo==='F'?'Femenino':'Masculino'}.
+RESPONDE SOLO con JSON válido (sin markdown, sin texto extra, sin comentarios). Formato exacto:
+[{"day":"Lunes","meals":[
+{"name":"Desayuno","time":"07:00–08:00","emoji":"🍳","method":"Plancha","tip":"Instrucción breve de preparación.","items":[{"f":"Huevos","q":"3 unidades","k":215},{"f":"Avena integral","q":"80g en seco","k":298}]},
+{"name":"Colación AM","time":"10:00–10:30","emoji":"🥛","method":"Sin cocción","tip":"Sirve y consume.","items":[{"f":"Yogur griego natural","q":"200g","k":112},{"f":"Nueces","q":"20g","k":148}]},
+{"name":"Almuerzo","time":"13:00–14:00","type":"variant","variants":[{"tag":"Especial","emoji":"🐠","method":"Plancha","tip":"Instrucción.","pf":"Salmón","pq":"180g","pk":306},{"tag":"Común","emoji":"🍗","method":"Plancha","tip":"Instrucción.","pf":"Pechuga de pollo","pq":"200g","pk":295}],"sides":[{"f":"Arroz integral","q":"150g cocido","k":165},{"f":"Ensalada mixta","q":"libre","k":20}]},
+{"name":"Colación PM","time":"17:00–17:30","emoji":"🥜","method":"Sin cocción","tip":"Sirve.","items":[{"f":"Almendras naturales","q":"20g","k":140}]},
+{"name":"Cena","time":"20:00–21:00","type":"variant","variants":[{"tag":"Especial","emoji":"🐟","method":"Horno","tip":"Instrucción.","pf":"Reineta al horno","pq":"200g","pk":204},{"tag":"Común","emoji":"🍗","method":"Plancha","tip":"Instrucción.","pf":"Pechuga de pollo","pq":"180g","pk":265}],"sides":[{"f":"Camote cocido","q":"150g","k":148},{"f":"Brócoli al vapor","q":"100g","k":34}]}
+]},{"day":"Martes","meals":[...]},{"day":"Miércoles","meals":[...]},{"day":"Jueves","meals":[...]},{"day":"Viernes","meals":[...]},{"day":"Sábado","meals":[...]},{"day":"Domingo","meals":[...]}]
+REGLAS ESTRICTAS: (1) Solo productos genéricos sin marcas disponibles en Chile. (2) Variedad de proteínas: pollo, pavo, pescado (merluza, reineta, salmón, atún, congrio), vacuno magro, cerdo magro, huevos, legumbres. (3) Carbohidratos: arroz integral, quinoa, papa con cáscara, camote, avena, pan integral, fideos integrales, lentejas. (4) Almuerzo y Cena SIEMPRE con type:variant. (5) k son kcal como número entero. (6) Devuelve exactamente 7 días.`;
+  try{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:8192}})
+    });
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const js=await resp.json();
+    let txt=js.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    txt=txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const newPlan=JSON.parse(txt);
+    if(!Array.isArray(newPlan)||newPlan.length<7) throw new Error('Plan inválido recibido');
+    newPlan.forEach(day=>{
+      (day.meals||[]).forEach(meal=>{
+        if(meal.type==='variant'){
+          (meal.variants||[]).forEach((v,vi)=>{
+            const c=pickColor(v.pf||'',vi===0);
+            v.ca=c.ca;v.cb=c.cb;
+          });
+        } else {
+          const itemText=(meal.items||[]).map(it=>it.f||'').join(' ');
+          const c=pickColor(itemText||meal.name||'',false);
+          meal.ca=c.ca;meal.cb=c.cb;
+        }
+      });
+    });
+    PLAN=newPlan;
+    uRef('nd/aiplan').set(JSON.stringify(newPlan));
+    const badge=document.getElementById('ai-plan-badge');
+    if(badge) badge.style.display='inline';
+    if(btn){btn.disabled=false;btn.textContent='✨ Regenerar plan con IA';}
+    renderWeekNav();renderAllDays();showSection('plan');
+  }catch(e){
+    console.error('Error IA:',e);
+    if(btn){btn.disabled=false;btn.textContent='✨ Generar plan con IA';}
+    alert('Error al generar el plan con IA. Verifica tu conexión e intenta de nuevo.');
+  }
+}
 
 // ── WEEK / DATE HELPERS ─────────────────────────────────────────────────────
 function weekStart(wk){ const d=new Date(START); d.setDate(d.getDate()+(wk-1)*7); return d; }
@@ -999,6 +1079,7 @@ AUTH.onAuthStateChanged(async user=>{
   UID=user.uid;
   document.getElementById('nd-login').style.display='none';
   document.getElementById('nd-loading').style.display='flex';
+  let _hasAIPlan=false;
   try{
     const dbTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),6000));
     const snap=await Promise.race([DB.ref(`users/${UID}`).once('value'),dbTimeout]);
@@ -1007,6 +1088,7 @@ AUTH.onAuthStateChanged(async user=>{
     STORE.cw=data.nd?.cw||1;
     STORE.weeks=data.nd?.weeks||{};
     STORE.inbody=data.nd?.inbody||{};
+    if(data.nd?.aiplan){try{const _p=JSON.parse(data.nd.aiplan);if(Array.isArray(_p)&&_p.length>=7){PLAN=_p;_hasAIPlan=true;}}catch(_e){}}
     CW=STORE.cw;
     if(PROFILE.inicio) START=new Date(PROFILE.inicio+'T12:00:00');
     USER_MACROS=Object.keys(PROFILE).length?calcMacros(PROFILE):{kcal:1900,prot:150,fat:55,carb:180,tdee:2400};
@@ -1022,6 +1104,10 @@ AUTH.onAuthStateChanged(async user=>{
   updateHeader();
   renderWeekNav();
   renderAllDays();
+  if(_hasAIPlan){
+    const _b=document.getElementById('ai-plan-badge');if(_b)_b.style.display='inline';
+    const _btn=document.getElementById('ai-gen-btn');if(_btn)_btn.textContent='✨ Regenerar plan con IA';
+  }
 });
 </script>
 </body>
