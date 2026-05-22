@@ -424,7 +424,7 @@ function calcMacros(p){
   const mult={sed:1.2,light:1.375,mod:1.55,active:1.725};
   const tdee=Math.round(bmr*(mult[actividad]||1.375));
   const adj={bajar:-500,mantener:0,ganar:300};
-  const kcal=Math.max(1200,tdee+(adj[objetivo]||−500));
+  const kcal=Math.max(1200,tdee+(adj[objetivo]||-500));
   const leanBase=mme||peso*0.75;
   const prot=Math.round(leanBase*2.2);
   const fat=Math.round((kcal*0.25)/9);
@@ -1000,7 +1000,8 @@ AUTH.onAuthStateChanged(async user=>{
   document.getElementById('nd-login').style.display='none';
   document.getElementById('nd-loading').style.display='flex';
   try{
-    const snap=await DB.ref(`users/${UID}`).once('value');
+    const dbTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),6000));
+    const snap=await Promise.race([DB.ref(`users/${UID}`).once('value'),dbTimeout]);
     const data=snap.val()||{};
     PROFILE=data.profile||{};
     STORE.cw=data.nd?.cw||1;
@@ -1010,7 +1011,7 @@ AUTH.onAuthStateChanged(async user=>{
     if(PROFILE.inicio) START=new Date(PROFILE.inicio+'T12:00:00');
     USER_MACROS=Object.keys(PROFILE).length?calcMacros(PROFILE):{kcal:1900,prot:150,fat:55,carb:180,tdee:2400};
   }catch(e){
-    console.warn('Error cargando datos',e);
+    console.warn('Error cargando datos:',e.message);
     PROFILE={}; STORE={cw:1,weeks:{},inbody:{}}; CW=1;
   }
   document.getElementById('nd-loading').style.display='none';
