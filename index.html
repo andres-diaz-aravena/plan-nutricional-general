@@ -601,18 +601,11 @@ async function generateAIPlan(){
   if(btn){btn.disabled=true;btn.textContent='⏳ Generando...';}
   const m=USER_MACROS;
   const objMap={bajar:'bajar grasa corporal',mantener:'mantener peso',ganar:'ganar masa muscular'};
-  const prompt=`Eres un nutricionista chileno. Crea un plan alimenticio de 7 días personalizado.
-Datos: Calorías ${m.kcal} kcal/día, Proteína ${m.prot}g, Grasas ${m.fat}g, Carbohidratos ${m.carb}g.
-Objetivo: ${objMap[PROFILE.objetivo]||'bajar grasa corporal'}. Sexo: ${PROFILE.sexo==='F'?'Femenino':'Masculino'}.
-RESPONDE SOLO con JSON válido (sin markdown, sin texto extra, sin comentarios). Formato exacto:
-[{"day":"Lunes","meals":[
-{"name":"Desayuno","time":"07:00–08:00","emoji":"🍳","method":"Plancha","tip":"Instrucción breve de preparación.","items":[{"f":"Huevos","q":"3 unidades","k":215},{"f":"Avena integral","q":"80g en seco","k":298}]},
-{"name":"Colación AM","time":"10:00–10:30","emoji":"🥛","method":"Sin cocción","tip":"Sirve y consume.","items":[{"f":"Yogur griego natural","q":"200g","k":112},{"f":"Nueces","q":"20g","k":148}]},
-{"name":"Almuerzo","time":"13:00–14:00","type":"variant","variants":[{"tag":"Especial","emoji":"🐠","method":"Plancha","tip":"Instrucción.","pf":"Salmón","pq":"180g","pk":306},{"tag":"Común","emoji":"🍗","method":"Plancha","tip":"Instrucción.","pf":"Pechuga de pollo","pq":"200g","pk":295}],"sides":[{"f":"Arroz integral","q":"150g cocido","k":165},{"f":"Ensalada mixta","q":"libre","k":20}]},
-{"name":"Colación PM","time":"17:00–17:30","emoji":"🥜","method":"Sin cocción","tip":"Sirve.","items":[{"f":"Almendras naturales","q":"20g","k":140}]},
-{"name":"Cena","time":"20:00–21:00","type":"variant","variants":[{"tag":"Especial","emoji":"🐟","method":"Horno","tip":"Instrucción.","pf":"Reineta al horno","pq":"200g","pk":204},{"tag":"Común","emoji":"🍗","method":"Plancha","tip":"Instrucción.","pf":"Pechuga de pollo","pq":"180g","pk":265}],"sides":[{"f":"Camote cocido","q":"150g","k":148},{"f":"Brócoli al vapor","q":"100g","k":34}]}
-]},{"day":"Martes","meals":[...]},{"day":"Miércoles","meals":[...]},{"day":"Jueves","meals":[...]},{"day":"Viernes","meals":[...]},{"day":"Sábado","meals":[...]},{"day":"Domingo","meals":[...]}]
-REGLAS ESTRICTAS: (1) Solo productos genéricos sin marcas disponibles en Chile. (2) Variedad de proteínas: pollo, pavo, pescado (merluza, reineta, salmón, atún, congrio), vacuno magro, cerdo magro, huevos, legumbres. (3) Carbohidratos: arroz integral, quinoa, papa con cáscara, camote, avena, pan integral, fideos integrales, lentejas. (4) Almuerzo y Cena SIEMPRE con type:variant. (5) k son kcal como número entero. (6) Devuelve exactamente 7 días.`;
+  const prompt=`Nutricionista chileno. Plan 7 días. Meta: ${m.kcal}kcal P:${m.prot}g G:${m.fat}g C:${m.carb}g. Objetivo: ${objMap[PROFILE.objetivo]||'bajar grasa'}. Sexo: ${PROFILE.sexo==='F'?'F':'M'}.
+Responde SOLO JSON array, sin markdown. 7 objetos con day y meals(5 comidas: Desayuno, Colación AM, Almuerzo, Colación PM, Cena).
+Comida simple: {name,time,emoji,method,tip,items:[{f,q,k}]}
+Almuerzo/Cena siempre: {name,time,type:"variant",variants:[{tag:"Especial",emoji,method,tip,pf,pq,pk},{tag:"Común",emoji,method,tip,pf,pq,pk}],sides:[{f,q,k}]}
+Reglas: productos genéricos sin marcas (Chile), proteínas variadas (pollo/pavo/pescado/vacuno/huevos/legumbres), k=kcal entero.`;
   try{
     const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,{
       method:'POST',headers:{'Content-Type':'application/json'},
