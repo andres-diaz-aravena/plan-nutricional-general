@@ -607,7 +607,7 @@ Comida simple: {name,time,emoji,method,tip,items:[{f,q,k}]}
 Almuerzo/Cena siempre: {name,time,type:"variant",variants:[{tag:"Especial",emoji,method,tip,pf,pq,pk},{tag:"Común",emoji,method,tip,pf,pq,pk}],sides:[{f,q,k}]}
 Reglas: productos genéricos sin marcas (Chile), proteínas variadas (pollo/pavo/pescado/vacuno/huevos/legumbres), k=kcal entero.`;
   try{
-    const resp=await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:4096}})
     });
