@@ -614,7 +614,7 @@ RESPONDE SOLO con JSON válido (sin markdown, sin texto extra, sin comentarios).
 ]},{"day":"Martes","meals":[...]},{"day":"Miércoles","meals":[...]},{"day":"Jueves","meals":[...]},{"day":"Viernes","meals":[...]},{"day":"Sábado","meals":[...]},{"day":"Domingo","meals":[...]}]
 REGLAS ESTRICTAS: (1) Solo productos genéricos sin marcas disponibles en Chile. (2) Variedad de proteínas: pollo, pavo, pescado (merluza, reineta, salmón, atún, congrio), vacuno magro, cerdo magro, huevos, legumbres. (3) Carbohidratos: arroz integral, quinoa, papa con cáscara, camote, avena, pan integral, fideos integrales, lentejas. (4) Almuerzo y Cena SIEMPRE con type:variant. (5) k son kcal como número entero. (6) Devuelve exactamente 7 días.`;
   try{
-    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:8192}})
     });
