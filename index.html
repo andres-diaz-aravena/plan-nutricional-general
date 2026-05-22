@@ -983,7 +983,13 @@ function updateHeader(){
 function signInWithGoogle(){ AUTH.signInWithPopup(GPROVIDER).catch(()=>{ document.getElementById('nd-login-err').style.display='block'; }); }
 function signOut(){ AUTH.signOut(); }
 
+const authTimeout=setTimeout(()=>{
+  document.getElementById('nd-loading').style.display='none';
+  document.getElementById('nd-login').style.display='flex';
+},5000);
+
 AUTH.onAuthStateChanged(async user=>{
+  clearTimeout(authTimeout);
   if(!user){
     document.getElementById('nd-login').style.display='flex';
     document.getElementById('nd-loading').style.display='none';
