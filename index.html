@@ -596,30 +596,39 @@ function pickColor(text,isEspecial){
   return isEspecial?{ca:'#0f766e',cb:'#134e4a'}:{ca:'#374151',cb:'#1f2937'};
 }
 
+async function _callGemini(prompt){
+  const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:8000}})
+  });
+  if(!resp.ok){
+    const errBody=await resp.json().catch(()=>({}));
+    throw new Error(`HTTP ${resp.status}: ${errBody?.error?.message||'sin detalle'}`);
+  }
+  const js=await resp.json();
+  let txt=js.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  txt=txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  return txt;
+}
+
 async function generateAIPlan(){
   const btn=document.getElementById('ai-gen-btn');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Generando...';}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Generando (1/2)...';}
   const m=USER_MACROS;
   const objMap={bajar:'bajar grasa corporal',mantener:'mantener peso',ganar:'ganar masa muscular'};
-  const prompt=`Nutricionista chileno. Plan 7 días. Meta: ${m.kcal}kcal P:${m.prot}g G:${m.fat}g C:${m.carb}g. Objetivo: ${objMap[PROFILE.objetivo]||'bajar grasa'}. Sexo: ${PROFILE.sexo==='F'?'F':'M'}.
-Responde SOLO JSON array, sin markdown. 7 objetos con day y meals(5 comidas: Desayuno, Colación AM, Almuerzo, Colación PM, Cena).
+  const base=`Nutricionista chileno. Meta: ${m.kcal}kcal P:${m.prot}g G:${m.fat}g C:${m.carb}g. Objetivo: ${objMap[PROFILE.objetivo]||'bajar grasa'}. Sexo: ${PROFILE.sexo==='F'?'F':'M'}.
+Responde SOLO JSON array, sin markdown. Objetos con day y meals(5 comidas: Desayuno, Colación AM, Almuerzo, Colación PM, Cena).
 Comida simple: {name,time,emoji,method,tip,items:[{f,q,k}]}
 Almuerzo/Cena siempre: {name,time,type:"variant",variants:[{tag:"Especial",emoji,method,tip,pf,pq,pk},{tag:"Común",emoji,method,tip,pf,pq,pk}],sides:[{f,q,k}]}
 Reglas: productos genéricos sin marcas (Chile), proteínas variadas (pollo/pavo/pescado/vacuno/huevos/legumbres), k=kcal entero.`;
   try{
-    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:16000}})
-    });
-    if(!resp.ok){
-      const errBody=await resp.json().catch(()=>({}));
-      throw new Error(`HTTP ${resp.status}: ${errBody?.error?.message||'sin detalle'}`);
-    }
-    const js=await resp.json();
-    let txt=js.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    txt=txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const newPlan=JSON.parse(txt);
-    if(!Array.isArray(newPlan)||newPlan.length<7) throw new Error('Plan inválido recibido');
+    const txt1=await _callGemini(base+'\nPlan para: Lunes, Martes, Miércoles, Jueves. Array de exactamente 4 objetos.');
+    const days14=JSON.parse(txt1);
+    if(btn) btn.textContent='⏳ Generando (2/2)...';
+    const txt2=await _callGemini(base+'\nPlan para: Viernes, Sábado, Domingo. Array de exactamente 3 objetos.');
+    const days37=JSON.parse(txt2);
+    const newPlan=[...days14,...days37];
+    if(!Array.isArray(newPlan)||newPlan.length<7) throw new Error('Plan incompleto ('+newPlan.length+' días)');
     newPlan.forEach(day=>{
       (day.meals||[]).forEach(meal=>{
         if(meal.type==='variant'){
